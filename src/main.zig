@@ -5,7 +5,8 @@ const Rng = std.rand.DefaultPrng;
 const Vector2 = raylib.Vector2;
 const Color = raylib.Color;
 
-const MAX_BUNNIES = 50_000;
+const ArrayList = std.ArrayList;
+
 const MAX_BATCH_ELEMENTS = 8_192;
 
 const Bunny = struct {
@@ -41,6 +42,9 @@ fn randomBunnyAt(position: Vector2) Bunny {
 }
 
 pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+
     raylib.SetConfigFlags(raylib.ConfigFlags{ .FLAG_WINDOW_RESIZABLE = true, .FLAG_MSAA_4X_HINT = true });
     raylib.InitWindow(800, 800, "raylib [textures] example - bunnymark");
     defer raylib.CloseWindow();
@@ -51,35 +55,31 @@ pub fn main() !void {
     const texture = raylib.LoadTexture("resources/wabbit_alpha.png");
     defer raylib.UnloadTexture(texture);
 
-    var bunnies: [MAX_BUNNIES]Bunny = undefined;
-    var bunnies_count: usize = 0;
+    var bunnies = ArrayList(Bunny).init(allocator);
+    defer bunnies.deinit();
+
     var label_buffer: [1024]u8 = undefined;
 
     while (!raylib.WindowShouldClose()) {
         // Create more bunnies
         if (raylib.IsMouseButtonDown(raylib.MouseButton.MOUSE_BUTTON_LEFT)) {
-            var i: usize = 0;
-            while (i < 100) : (i += 1) {
-                if (bunnies_count < MAX_BUNNIES) {
-                    bunnies[bunnies_count] = randomBunnyAt(raylib.GetMousePosition());
-                    bunnies_count += 1;
-                }
+            for (0..100) |_| {
+                try bunnies.append(randomBunnyAt(raylib.GetMousePosition()));
             }
         }
 
         // Update bunnies
-        var i: usize = 0;
-        while (i < bunnies_count) : (i += 1) {
-            bunnies[i].position.x += bunnies[i].speed.x;
-            bunnies[i].position.y += bunnies[i].speed.y;
+        for (bunnies.items) |*bunny| {
+            bunny.position.x += bunny.speed.x;
+            bunny.position.y += bunny.speed.y;
 
-            if (@as(c_int, @intFromFloat(bunnies[i].position.x)) + @divTrunc(texture.width, 2) > raylib.GetScreenWidth() or
-                @as(c_int, @intFromFloat(bunnies[i].position.x)) + @divTrunc(texture.width, 2) < 0)
-                bunnies[i].speed.x *= -1;
+            if (@as(c_int, @intFromFloat(bunny.position.x)) + @divTrunc(texture.width, 2) > raylib.GetScreenWidth() or
+                @as(c_int, @intFromFloat(bunny.position.x)) + @divTrunc(texture.width, 2) < 0)
+                bunny.speed.x *= -1;
 
-            if (@as(c_int, @intFromFloat(bunnies[i].position.y)) + @divTrunc(texture.height, 2) > raylib.GetScreenHeight() or
-                @as(c_int, @intFromFloat(bunnies[i].position.y)) + @divTrunc(texture.height, 2) - 40 < 0)
-                bunnies[i].speed.y *= -1;
+            if (@as(c_int, @intFromFloat(bunny.position.y)) + @divTrunc(texture.height, 2) > raylib.GetScreenHeight() or
+                @as(c_int, @intFromFloat(bunny.position.y)) + @divTrunc(texture.height, 2) - 40 < 0)
+                bunny.speed.y *= -1;
         }
 
         raylib.BeginDrawing();
@@ -87,9 +87,8 @@ pub fn main() !void {
 
         raylib.ClearBackground(raylib.RAYWHITE);
 
-        var j: usize = 0;
-        while (j < bunnies_count) : (j += 1) {
-            raylib.DrawTextureV(texture, bunnies[j].position, bunnies[j].color);
+        for (bunnies.items) |bunny| {
+            raylib.DrawTextureV(texture, bunny.position, bunny.color);
         }
 
         raylib.DrawRectangle(0, 0, raylib.GetScreenWidth(), 40, raylib.BLACK);
@@ -97,13 +96,13 @@ pub fn main() !void {
         raylib.DrawText(try std.fmt.bufPrintZ(
             &label_buffer,
             "bunnies: {d}",
-            .{bunnies_count},
+            .{bunnies.items.len},
         ), 120, 10, 20, raylib.GREEN);
 
         raylib.DrawText(try std.fmt.bufPrintZ(
             &label_buffer,
             "batched draw calls: {d}",
-            .{1 + bunnies_count / MAX_BATCH_ELEMENTS},
+            .{1 + bunnies.items.len / MAX_BATCH_ELEMENTS},
         ), 320, 10, 20, raylib.MAROON);
 
         raylib.DrawFPS(10, 10);
