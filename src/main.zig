@@ -54,6 +54,8 @@ pub fn main() !void {
     // NOTE: Textures MUST be loaded after Window initialization (OpenGL context is required)
     const texture = raylib.LoadTexture("resources/wabbit_alpha.png");
     defer raylib.UnloadTexture(texture);
+    const texture_halfwidth = @divTrunc(texture.width, 2);
+    const texture_halfheight = @divTrunc(texture.height, 2);
 
     var bunnies = ArrayList(Bunny).init(allocator);
     defer bunnies.deinit();
@@ -61,10 +63,19 @@ pub fn main() !void {
     var label_buffer: [1024]u8 = undefined;
 
     while (!raylib.WindowShouldClose()) {
+        const width = raylib.GetScreenWidth();
+        const height = raylib.GetScreenHeight();
+        const right_edge = @as(f32, @floatFromInt(width - texture_halfwidth));
+        const left_edge = @as(f32, @floatFromInt(-texture_halfwidth));
+        const bottom_edge = @as(f32, @floatFromInt(height - texture_halfheight));
+        const top_edge = @as(f32, @floatFromInt(40 - texture_halfheight));
+
         // Create more bunnies
         if (raylib.IsMouseButtonDown(raylib.MouseButton.MOUSE_BUTTON_LEFT)) {
+            const position = raylib.GetMousePosition();
+
             for (0..100) |_| {
-                try bunnies.append(randomBunnyAt(raylib.GetMousePosition()));
+                try bunnies.append(randomBunnyAt(position));
             }
         }
 
@@ -73,12 +84,10 @@ pub fn main() !void {
             bunny.position.x += bunny.speed.x;
             bunny.position.y += bunny.speed.y;
 
-            if (@as(c_int, @intFromFloat(bunny.position.x)) + @divTrunc(texture.width, 2) > raylib.GetScreenWidth() or
-                @as(c_int, @intFromFloat(bunny.position.x)) + @divTrunc(texture.width, 2) < 0)
+            if (bunny.position.x > right_edge or bunny.position.x < left_edge)
                 bunny.speed.x *= -1;
 
-            if (@as(c_int, @intFromFloat(bunny.position.y)) + @divTrunc(texture.height, 2) > raylib.GetScreenHeight() or
-                @as(c_int, @intFromFloat(bunny.position.y)) + @divTrunc(texture.height, 2) - 40 < 0)
+            if (bunny.position.y > bottom_edge or bunny.position.y < top_edge)
                 bunny.speed.y *= -1;
         }
 
@@ -91,7 +100,7 @@ pub fn main() !void {
             raylib.DrawTextureV(texture, bunny.position, bunny.color);
         }
 
-        raylib.DrawRectangle(0, 0, raylib.GetScreenWidth(), 40, raylib.BLACK);
+        raylib.DrawRectangle(0, 0, width, 40, raylib.BLACK);
 
         raylib.DrawText(try std.fmt.bufPrintZ(
             &label_buffer,
