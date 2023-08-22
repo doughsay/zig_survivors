@@ -17,6 +17,10 @@ const Bunny = struct {
 
 var rng = Rng.init(0);
 
+fn intToFloat(i: i32) f32 {
+    return @as(f32, @floatFromInt(i));
+}
+
 fn randomFloat(min: f32, max: f32) f32 {
     return std.math.lerp(min, max, rng.random().float(f32));
 }
@@ -65,10 +69,10 @@ pub fn main() !void {
     while (!raylib.WindowShouldClose()) {
         const width = raylib.GetScreenWidth();
         const height = raylib.GetScreenHeight();
-        const right_edge = @as(f32, @floatFromInt(width - texture_halfwidth));
-        const left_edge = @as(f32, @floatFromInt(-texture_halfwidth));
-        const bottom_edge = @as(f32, @floatFromInt(height - texture_halfheight));
-        const top_edge = @as(f32, @floatFromInt(40 - texture_halfheight));
+        const right_edge = intToFloat(width - texture_halfwidth);
+        const left_edge = intToFloat(-texture_halfwidth);
+        const bottom_edge = intToFloat(height - texture_halfheight);
+        const top_edge = intToFloat(40 - texture_halfheight);
 
         // Create more bunnies
         if (raylib.IsMouseButtonDown(raylib.MouseButton.MOUSE_BUTTON_LEFT)) {
