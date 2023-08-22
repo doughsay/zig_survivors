@@ -24,7 +24,7 @@ fn randomFloat(min: f32, max: f32) f32 {
     return std.math.lerp(min, max, rng.random().float(f32));
 }
 
-pub fn main() void {
+pub fn main() !void {
     std.debug.print("\nrandom float: {d}\n", .{randomFloat(-250.0, 250.0)});
     std.debug.print("\nrandom float: {d}\n", .{randomFloat(-250.0, 250.0)});
     std.debug.print("\nrandom float: {d}\n", .{randomFloat(-250.0, 250.0)});
@@ -40,6 +40,7 @@ pub fn main() void {
 
     var bunnies: [max_bunnies]Bunny = undefined;
     var bunnies_count: usize = 0;
+    var label_buffer: [1024]u8 = undefined;
 
     while (!raylib.WindowShouldClose()) {
         // Create more bunnies
@@ -95,17 +96,21 @@ pub fn main() void {
 
         raylib.DrawRectangle(0, 0, raylib.GetScreenWidth(), 40, raylib.BLACK);
 
-        const bunnies_count_text = std.fmt.allocPrintZ(std.heap.c_allocator, "bunnies: {d}", .{bunnies_count});
-        if (bunnies_count_text) |text| {
-            raylib.DrawText(text, 120, 10, 20, raylib.GREEN);
-            std.heap.c_allocator.free(text);
-        } else |_| {}
+        raylib.DrawText(
+            try std.fmt.bufPrintZ(&label_buffer, "bunnies: {d}", .{bunnies_count}),
+            120,
+            10,
+            20,
+            raylib.GREEN,
+        );
 
-        const batched_calls_text = std.fmt.allocPrintZ(std.heap.c_allocator, "batched draw calls: {d}", .{1 + bunnies_count / max_batch_elements});
-        if (batched_calls_text) |text| {
-            raylib.DrawText(text, 320, 10, 20, raylib.MAROON);
-            std.heap.c_allocator.free(text);
-        } else |_| {}
+        raylib.DrawText(
+            try std.fmt.bufPrintZ(&label_buffer, "batched draw calls: {d}", .{1 + bunnies_count / max_batch_elements}),
+            320,
+            10,
+            20,
+            raylib.MAROON,
+        );
 
         raylib.DrawFPS(10, 10);
     }
