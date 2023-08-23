@@ -10,9 +10,36 @@ const ArrayList = std.ArrayList;
 const MAX_BATCH_ELEMENTS = 8_192;
 
 const Bunny = struct {
+    var texture: raylib.Texture2D = undefined;
+
     position: Vector2,
     speed: Vector2,
     color: Color,
+
+    fn init() void {
+        texture = raylib.LoadTexture("resources/wabbit_alpha.png");
+    }
+
+    fn deinit() void {
+        raylib.UnloadTexture(texture);
+    }
+
+    fn move(self: *Bunny) void {
+        self.position.x += self.speed.x;
+        self.position.y += self.speed.y;
+    }
+
+    fn reverse_x(self: *Bunny) void {
+        self.speed.x *= -1;
+    }
+
+    fn reverse_y(self: *Bunny) void {
+        self.speed.y *= -1;
+    }
+
+    fn render(self: Bunny) void {
+        raylib.DrawTextureV(texture, self.position, self.color);
+    }
 };
 
 var rng = Rng.init(0);
@@ -56,10 +83,11 @@ pub fn main() !void {
     raylib.SetTargetFPS(60);
 
     // NOTE: Textures MUST be loaded after Window initialization (OpenGL context is required)
-    const texture = raylib.LoadTexture("resources/wabbit_alpha.png");
-    defer raylib.UnloadTexture(texture);
-    const texture_halfwidth = @divTrunc(texture.width, 2);
-    const texture_halfheight = @divTrunc(texture.height, 2);
+    Bunny.init();
+    defer Bunny.deinit();
+
+    const texture_halfwidth = @divTrunc(Bunny.texture.width, 2);
+    const texture_halfheight = @divTrunc(Bunny.texture.height, 2);
 
     var bunnies = ArrayList(Bunny).init(allocator);
     defer bunnies.deinit();
@@ -85,14 +113,13 @@ pub fn main() !void {
 
         // Update bunnies
         for (bunnies.items) |*bunny| {
-            bunny.position.x += bunny.speed.x;
-            bunny.position.y += bunny.speed.y;
+            bunny.move();
 
             if (bunny.position.x > right_edge or bunny.position.x < left_edge)
-                bunny.speed.x *= -1;
+                bunny.reverse_x();
 
             if (bunny.position.y > bottom_edge or bunny.position.y < top_edge)
-                bunny.speed.y *= -1;
+                bunny.reverse_y();
         }
 
         raylib.BeginDrawing();
@@ -101,7 +128,7 @@ pub fn main() !void {
         raylib.ClearBackground(raylib.RAYWHITE);
 
         for (bunnies.items) |bunny| {
-            raylib.DrawTextureV(texture, bunny.position, bunny.color);
+            bunny.render();
         }
 
         raylib.DrawRectangle(0, 0, width, 40, raylib.BLACK);
