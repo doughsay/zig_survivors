@@ -2,47 +2,24 @@ const std = @import("std");
 const raylib = @import("raylib");
 const Bunny = @import("./bunny.zig").Bunny;
 
-const Rng = std.rand.DefaultPrng;
-const Vector2 = raylib.Vector2;
-const Color = raylib.Color;
-
 const ArrayList = std.ArrayList;
 
 const MAX_BATCH_ELEMENTS = 8_192;
-
-var rng = Rng.init(0);
 
 fn intToFloat(i: i32) f32 {
     return @as(f32, @floatFromInt(i));
 }
 
-fn randomFloat(min: f32, max: f32) f32 {
-    return std.math.lerp(min, max, rng.random().float(f32));
-}
-
-fn randomByte(min: u8, max: u8) u8 {
-    return rng.random().uintAtMost(u8, max - min) + min;
-}
-
-fn randomBunnyAt(position: Vector2) Bunny {
-    return Bunny{
-        .position = position,
-        .speed = Vector2{
-            .x = randomFloat(-250.0, 250.0) / 60.0,
-            .y = randomFloat(-250.0, 250.0) / 60.0,
-        },
-        .color = Color{
-            .a = 255,
-            .r = randomByte(50, 240),
-            .g = randomByte(80, 240),
-            .b = randomByte(100, 240),
-        },
-    };
-}
-
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
+
+    var prng = std.rand.DefaultPrng.init(blk: {
+        var seed: u64 = undefined;
+        try std.os.getrandom(std.mem.asBytes(&seed));
+        break :blk seed;
+    });
+    const random = prng.random();
 
     raylib.SetConfigFlags(raylib.ConfigFlags{ .FLAG_WINDOW_RESIZABLE = true, .FLAG_MSAA_4X_HINT = true });
     raylib.InitWindow(800, 800, "raylib [textures] example - bunnymark");
@@ -51,7 +28,7 @@ pub fn main() !void {
     raylib.SetTargetFPS(60);
 
     // NOTE: Textures MUST be loaded after Window initialization (OpenGL context is required)
-    Bunny.init();
+    Bunny.init(random);
     defer Bunny.deinit();
 
     const texture_halfwidth = @divTrunc(Bunny.texture.width, 2);
@@ -75,7 +52,7 @@ pub fn main() !void {
             const position = raylib.GetMousePosition();
 
             for (0..100) |_| {
-                try bunnies.append(randomBunnyAt(position));
+                try bunnies.append(Bunny.newRandomAt(position));
             }
         }
 
@@ -83,11 +60,11 @@ pub fn main() !void {
         for (bunnies.items) |*bunny| {
             bunny.move();
 
-            if (bunny.position.x > right_edge or bunny.position.x < left_edge)
-                bunny.reverse_x();
+            if (bunny.position.x > right_edge and bunny.speed.x > 0 or bunny.position.x < left_edge and bunny.speed.x < 0)
+                bunny.reverseX();
 
-            if (bunny.position.y > bottom_edge or bunny.position.y < top_edge)
-                bunny.reverse_y();
+            if (bunny.position.y > bottom_edge and bunny.speed.y > 0 or bunny.position.y < top_edge and bunny.speed.y < 0)
+                bunny.reverseY();
         }
 
         raylib.BeginDrawing();
