@@ -1,5 +1,6 @@
 const std = @import("std");
 const raylib = @import("raylib");
+const Bunny = @import("./bunny.zig").Bunny;
 
 const Rng = std.rand.DefaultPrng;
 const Vector2 = raylib.Vector2;
@@ -8,39 +9,6 @@ const Color = raylib.Color;
 const ArrayList = std.ArrayList;
 
 const MAX_BATCH_ELEMENTS = 8_192;
-
-const Bunny = struct {
-    var texture: raylib.Texture2D = undefined;
-
-    position: Vector2,
-    speed: Vector2,
-    color: Color,
-
-    fn init() void {
-        texture = raylib.LoadTexture("resources/wabbit_alpha.png");
-    }
-
-    fn deinit() void {
-        raylib.UnloadTexture(texture);
-    }
-
-    fn move(self: *Bunny) void {
-        self.position.x += self.speed.x;
-        self.position.y += self.speed.y;
-    }
-
-    fn reverse_x(self: *Bunny) void {
-        self.speed.x *= -1;
-    }
-
-    fn reverse_y(self: *Bunny) void {
-        self.speed.y *= -1;
-    }
-
-    fn render(self: Bunny) void {
-        raylib.DrawTextureV(texture, self.position, self.color);
-    }
-};
 
 var rng = Rng.init(0);
 
