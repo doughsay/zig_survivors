@@ -7,11 +7,11 @@ pub const Player = struct {
     direction: Vector2,
     moving: bool,
 
-    pub fn move(self: *Player) void {
-        if (self.moving) self.position.add(self.direction);
-    }
+    // pub fn move(self: *Player) void {
+    //     if (self.moving) self.position.add(self.direction);
+    // }
 
     pub fn render(self: Player) void {
-        raylib.DrawCircleV(self.position, 20.0, raylib.BLUE);
+        raylib.DrawRectangleV(self.position.sub(Vector2{ .x = 20.0, .y = 30.0 }), Vector2{ .x = 40.0, .y = 60.0 }, raylib.BLUE);
     }
 };

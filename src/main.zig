@@ -2,6 +2,7 @@ const std = @import("std");
 const raylib = @import("raylib");
 const Bunny = @import("./bunny.zig").Bunny;
 const Player = @import("./player.zig").Player;
+const Enemy = @import("./enemy.zig").Enemy;
 
 const Camera2D = raylib.Camera2D;
 const Vector2 = raylib.Vector2;
@@ -63,6 +64,17 @@ pub fn main() !void {
         .moving = false,
     };
 
+    var mobs = ArrayList(Enemy).init(allocator);
+    defer mobs.deinit();
+    var next_mob_id: usize = 1;
+
+    // var _mob1 = Enemy.new(1, 1.0, Vector2{ .x = 250.0, .y = 250.0 });
+    // var _mob2 = Enemy.new(2, 1.0, Vector2{ .x = -250.0, .y = 250.0 });
+    // var _mob3 = Enemy.new(3, 1.0, Vector2{ .x = 250.0, .y = -250.0 });
+    // var _mob4 = Enemy.new(4, 1.0, Vector2{ .x = -250.0, .y = -250.0 });
+
+    // var mobs = [4]*Enemy{ &_mob1, &_mob2, &_mob3, &_mob4 };
+
     // NOTE: Textures MUST be loaded after Window initialization (OpenGL context is required)
     Bunny.init(random);
     defer Bunny.deinit();
@@ -87,15 +99,15 @@ pub fn main() !void {
 
         // Move player
         if (raylib.IsKeyDown(raylib.KeyboardKey.KEY_RIGHT)) {
-            player.position.x += 2.0;
+            player.position.x += 3.0;
         } else if (raylib.IsKeyDown(raylib.KeyboardKey.KEY_LEFT)) {
-            player.position.x -= 2.0;
+            player.position.x -= 3.0;
         }
 
         if (raylib.IsKeyDown(raylib.KeyboardKey.KEY_DOWN)) {
-            player.position.y += 2.0;
+            player.position.y += 3.0;
         } else if (raylib.IsKeyDown(raylib.KeyboardKey.KEY_UP)) {
-            player.position.y -= 2.0;
+            player.position.y -= 3.0;
         }
 
         // Center camera on player
@@ -106,9 +118,12 @@ pub fn main() !void {
             const position = raylib.GetMousePosition();
             const actual_position = position.sub(camera.offset).add(camera.target);
 
-            for (0..100) |_| {
-                try bunnies.append(Bunny.newRandomAt(actual_position));
-            }
+            // for (0..100) |_| {
+            //     try bunnies.append(Bunny.newRandomAt(actual_position));
+            // }
+
+            try mobs.append(Enemy.new(next_mob_id, 1.0, actual_position));
+            next_mob_id += 1;
         }
 
         // Update bunnies
@@ -120,6 +135,18 @@ pub fn main() !void {
 
             if (bunny.position.y > bottom_edge and bunny.speed.y > 0 or bunny.position.y < top_edge and bunny.speed.y < 0)
                 bunny.reverseY();
+        }
+
+        for (mobs.items) |*mob| {
+            mob.move(player.position);
+        }
+
+        for (mobs.items) |*mob1| {
+            for (mobs.items) |*mob2| {
+                if (mob1 != mob2 and mob1.tooClose(mob2)) {
+                    mob1.moveAwayFrom(mob2);
+                }
+            }
         }
 
         // Draw
@@ -141,6 +168,10 @@ pub fn main() !void {
                 }
 
                 player.render();
+
+                for (mobs.items) |*mob| {
+                    mob.render();
+                }
             }
 
             raylib.DrawRectangle(0, 0, width, 40, raylib.BLACK);
